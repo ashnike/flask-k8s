@@ -1,0 +1,10 @@
+Flask
+Flask-SQLAlchemy
+pymysql
+requests
+Werkzeug
+Flask-Cors
+Flask-RESTful
+pika
+cryptography
+python-dotenv

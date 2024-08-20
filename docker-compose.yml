@@ -1,0 +1,73 @@
+version: '3.9'
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:8.4.2
+    platform: linux/x86_64
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: slsrrd2rd  # Change this to your desired root password
+      MYSQL_DATABASE: devops
+      MYSQL_USER: tommy
+      MYSQL_PASSWORD: tommypassword
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql  # Persistent storage for MySQL data
+    networks:
+      - twotier
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "tommy", "-p$MYSQL_PASSWORD"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+
+  flask-app:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Ensure you have a Dockerfile in the context
+    container_name: flask-app
+    ports:
+      - "5001:5000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: tommy
+      MYSQL_PASSWORD: tommypassword
+      MYSQL_DATABASE: devops
+      RABBITMQ_HOST: rabbitmq 
+      RABBITMQ_PORT: 5672  # Add this line to configure RabbitMQ connection
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:  # Add this to ensure Flask waits for RabbitMQ to be healthy
+        condition: service_healthy
+    networks:
+      - twotier
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.13.6-management
+    ports:
+      - "5672:5672"  # Port for RabbitMQ
+      - "15672:15672"  # Port for RabbitMQ Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - twotier
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 30s
+      retries: 3
+
+volumes:
+  mysql-data:
+    driver: local  # Specifies the driver for the volume
+
+networks:
+  twotier:
+    driver: bridge
+
+name: 2tier  # Optional: specify a project name for clarity

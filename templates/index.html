@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>Flask App</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Flask App!</h1>
+        <div class="messages">
+            {% for message in messages %}
+                <p>{{ message[0] }}</p>
+            {% endfor %}
+        </div>
+
+        <form id="messageForm">
+            <label for="new_message">Enter a new message:</label>
+            <input type="text" id="new_message" name="new_message" placeholder="Enter a new message" aria-label="New Message">
+            <div class="error-message" id="error-message"></div>
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $("#messageForm").on("submit", function(event) {
+                event.preventDefault(); // Prevent the default form submission
+                
+                const newMessage = $("#new_message").val().trim();
+                const errorMessage = $("#error-message");
+
+                if (!newMessage) {
+                    errorMessage.text("Please enter a message.");
+                    return;
+                }
+
+                $.ajax({
+                    url: "/submit",
+                    type: "POST",
+                    data: { new_message: newMessage },
+                    success: function(response) {
+                        if (response && response.messages) {
+                            // Clear existing messages and display new ones
+                            $(".messages").empty();
+                            response.messages.forEach(function(msg) {
+                                $(".messages").append("<p>" + $('<div/>').text(msg).html() + "</p>");
+                            });
+                            $("#new_message").val(""); // Clear the input field
+                            errorMessage.text(""); // Clear any previous error messages
+                        } else {
+                            console.error("Unexpected response format:", response);
+                            errorMessage.text("Unexpected response format. Please try again.");
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("AJAX Error:", status, error);
+                        errorMessage.text("An error occurred while submitting your message. Please try again.");
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
